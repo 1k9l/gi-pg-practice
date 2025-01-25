@@ -1,0 +1,91 @@
+html,
+body {
+  padding: 0;
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen,
+    Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
+  background-color: #121212;
+  color: #ffffff;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.navbar {
+  background-color: #1f1f1f;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.navbar h1 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.navbar .links {
+  display: flex;
+  gap: 1rem;
+}
+
+.section {
+  background-color: #1c1c1c;
+  padding: 1rem;
+  margin: 1rem 0;
+  border-radius: 6px;
+}
+
+.section h2 {
+  margin-top: 0;
+  font-size: 1.2rem;
+}
+
+.section label {
+  display: inline-block;
+  margin-top: 0.5rem;
+}
+
+.section input[type="text"],
+.section input[type="number"],
+.section textarea {
+  width: 100%;
+  padding: 0.5rem;
+  background-color: #333333;
+  color: #ffffff;
+  border: 1px solid #555555;
+  margin-bottom: 0.5rem;
+  border-radius: 4px;
+}
+
+.section button {
+  background-color: #2e2e2e;
+  color: #fff;
+  border: 1px solid #444;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.section button:hover {
+  background-color: #444;
+}
+
+.result {
+  background-color: #000000;
+  color: #00ff00;
+  padding: 1rem;
+  margin-top: 0.5rem;
+  white-space: pre-wrap; /* Keep JSON formatting */
+  border: 1px solid #555555;
+  border-radius: 4px;
+  max-height: 350px;
+  overflow-y: auto;
+}
