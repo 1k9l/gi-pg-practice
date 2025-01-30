@@ -1,7 +1,9 @@
 import { useState } from 'react';
 
 export default function Home() {
-  // For each endpoint, we store any user input & result in local state:
+  const baseUrl = 'https://tx.ordstuff.info';
+
+  // States for all inputs/results
   const [addressInput, setAddressInput] = useState('');
   const [addressResult, setAddressResult] = useState('');
 
@@ -13,8 +15,10 @@ export default function Home() {
 
   const [blockCountResult, setBlockCountResult] = useState('');
   const [blockHashTipResult, setBlockHashTipResult] = useState('');
+
   const [blockHashByHeightInput, setBlockHashByHeightInput] = useState('');
   const [blockHashByHeightResult, setBlockHashByHeightResult] = useState('');
+
   const [blockHeightTipResult, setBlockHeightTipResult] = useState('');
   const [blocksResult, setBlocksResult] = useState('');
   const [blockTimeResult, setBlockTimeResult] = useState('');
@@ -65,9 +69,7 @@ export default function Home() {
   const [txInput, setTxInput] = useState('');
   const [txResult, setTxResult] = useState('');
 
-  const baseUrl = 'https://tx.ordstuff.info';
-
-  // Helper function to handle GET requests
+  // Helper function (GET) that tries JSON parse first, else returns text
   async function handleGetRequest(endpoint, setResult) {
     try {
       const res = await fetch(`${baseUrl}${endpoint}`, {
@@ -80,14 +82,21 @@ export default function Home() {
         const errorText = await res.text();
         throw new Error(`Error: ${res.status} - ${errorText}`);
       }
-      const data = await res.json();
-      setResult(JSON.stringify(data, null, 2));
-    } catch (err) {
-      setResult(err.message);
+      const text = await res.text();
+      // Attempt parse as JSON
+      try {
+        const data = JSON.parse(text);
+        setResult(JSON.stringify(data, null, 2));
+      } catch (err) {
+        // If not JSON, just display the raw text
+        setResult(text);
+      }
+    } catch (error) {
+      setResult(error.message);
     }
   }
 
-  // Helper function to handle POST requests
+  // Helper function (POST) always expects JSON
   async function handlePostRequest(endpoint, body, setResult) {
     try {
       const res = await fetch(`${baseUrl}${endpoint}`, {
@@ -111,11 +120,10 @@ export default function Home() {
 
   return (
     <div>
-      {/* Simple Nav Bar Placeholder */}
+      {/* Simple Nav Bar */}
       <div className="navbar">
         <h1>Ordinal API Tester</h1>
         <div className="links">
-          {/* Add future pages/links here */}
           <span>Home</span>
         </div>
       </div>
@@ -199,9 +207,7 @@ export default function Home() {
           <button onClick={() => handleGetRequest('/blockhash', setBlockHashTipResult)}>
             Get Latest Block Hash
           </button>
-          {blockHashTipResult && (
-            <pre className="result">{blockHashTipResult}</pre>
-          )}
+          {blockHashTipResult && <pre className="result">{blockHashTipResult}</pre>}
         </div>
 
         {/* /blockhash/<BLOCKHEIGHT> */}
