@@ -2,9 +2,6 @@
 
 import Link from 'next/link';
 
-// Notice: we do NOT import '../styles/globals.css' here!
-// Next.js won't allow importing global CSS in components.
-
 export default function Layout({ children }) {
   return (
     <div>
@@ -14,6 +11,7 @@ export default function Layout({ children }) {
         <div className="links">
           <Link href="/">Home</Link>
           <Link href="/connect" style={{ marginLeft: '1rem' }}>Connect</Link>
+          <Link href="/maze" style={{ marginLeft: '1rem' }}>Maze</Link>
         </div>
       </div>
 
