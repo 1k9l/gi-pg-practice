@@ -1,148 +1,232 @@
 // File: pages/maze.js
-
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Wallet, { AddressPurpose } from 'sats-connect';
 
-/**
- * 1) We'll get addresses from Xverse, just like connect.js
- * 2) We'll fetch /address/<ADDRESS> to see all inscriptions
- * 3) We'll choose an inscription
- * 4) We'll generate a deterministic Maze from that inscription ID
- */
-
-// Simple deterministic "hash string => integer array" function
-// We'll use it to seed a random generator for the maze.
+// Maze generation helpers
 function hashStringToNumbers(str) {
-  // Basic approach: transform each char code, sum & shift
-  // This is not cryptographically strong, but it's enough for a stable "seed".
-  let hash1 = 0x12345678;
-  let hash2 = 0x87654321;
+  // Quick 'hash' to produce two seeds from a string
+  let h1 = 0x12345678;
+  let h2 = 0x87654321;
   for (let i = 0; i < str.length; i++) {
     const c = str.charCodeAt(i);
-    hash1 = (hash1 ^ c) + ((hash1 << 5) + (hash1 >> 2)) | 0;
-    hash2 = (hash2 ^ c) + ((hash2 << 6) + (hash2 >> 3)) | 0;
+    h1 = (h1 ^ c) + ((h1 << 5) + (h1 >> 2)) | 0;
+    h2 = (h2 ^ c) + ((h2 << 6) + (h2 >> 3)) | 0;
   }
-  return [hash1 >>> 0, hash2 >>> 0]; // forced unsigned
+  return [h1 >>> 0, h2 >>> 0];
 }
-
-// We'll do a small pseudo-random generator from two seeds.
 function createSeededRandom([seed1, seed2]) {
   let s1 = seed1;
   let s2 = seed2;
-
-  // Return a function that gives us a float between 0 and 1
   return function random() {
-    // Some arbitrary operations
     s1 ^= s1 << 13; s1 ^= s1 >> 17; s1 ^= s1 << 5;
     s2 ^= s2 << 15; s2 ^= s2 >> 13; s2 ^= s2 << 7;
-    // combine
     const t = (s1 + s2) >>> 0;
-    // scale to [0, 1)
-    return (t & 0xFFFFFF) / 16777216;
+    return (t & 0xffffff) / 16777216;
   };
 }
 
-/**
- * We'll create a small NxN maze with a random DFS carve-out.
- * We'll store it as ASCII lines. The function returns the ASCII string.
- */
-function generateMazeASCII(inscriptionId) {
-  const [hash1, hash2] = hashStringToNumbers(inscriptionId);
-  const rand = createSeededRandom([hash1, hash2]);
+// Generate a solvable NxN maze using DFS carve-out approach
+// Each cell => { walls: [top,right,bottom,left], visited: bool }
+function buildMazeFromInscriptionID(inscriptionId, size = 10) {
+  const seeds = hashStringToNumbers(inscriptionId);
+  const rand = createSeededRandom(seeds);
 
-  const N = 10; // Maze dimension
-  // We'll represent a grid of cells, each cell has walls up/down/left/right
-  // We'll store them in an array, then carve out with a DFS.
   const cells = [];
-  for (let i = 0; i < N; i++) {
-    cells.push([]);
-    for (let j = 0; j < N; j++) {
-      // each cell: { visited, walls: [top,right,bottom,left] }
-      cells[i].push({
-        visited: false,
-        walls: [true, true, true, true]
+  for (let r = 0; r < size; r++) {
+    const row = [];
+    for (let c = 0; c < size; c++) {
+      row.push({
+        walls: [true, true, true, true], // top,right,bottom,left
+        visited: false
       });
     }
+    cells.push(row);
   }
 
-  // direction offsets: up(0),right(1),down(2),left(3)
-  const dirOffsets = [
-    [-1, 0], [0, 1], [1, 0], [0, -1]
-  ];
-
-  // DFS stack
   const stack = [[0, 0]];
   cells[0][0].visited = true;
 
-  while (stack.length > 0) {
-    const [row, col] = stack[stack.length - 1];
+  // directions: 0=up,1=right,2=down,3=left
+  const offsets = [
+    [-1, 0], [0, 1], [1, 0], [0, -1]
+  ];
 
-    // gather unvisited neighbors
+  while (stack.length > 0) {
+    const [r, c] = stack[stack.length - 1];
+    // find unvisited neighbors
     const neighbors = [];
     for (let d = 0; d < 4; d++) {
-      const nr = row + dirOffsets[d][0];
-      const nc = col + dirOffsets[d][1];
-      if (nr >= 0 && nr < N && nc >= 0 && nc < N && !cells[nr][nc].visited) {
+      const nr = r + offsets[d][0];
+      const nc = c + offsets[d][1];
+      if (nr >= 0 && nr < size && nc >= 0 && nc < size && !cells[nr][nc].visited) {
         neighbors.push(d);
       }
     }
 
     if (neighbors.length === 0) {
-      // backtrack
       stack.pop();
     } else {
-      // pick a random direction
       const d = neighbors[Math.floor(rand() * neighbors.length)];
-      // carve out
-      cells[row][col].walls[d] = false;
-
-      const nr = row + dirOffsets[d][0];
-      const nc = col + dirOffsets[d][1];
+      cells[r][c].walls[d] = false;
+      const nr = r + offsets[d][0];
+      const nc = c + offsets[d][1];
       cells[nr][nc].visited = true;
-      // also remove the opposite wall from the neighbor
-      // 0->2, 1->3, 2->0, 3->1
-      const opposite = (d + 2) % 4;
-      cells[nr][nc].walls[opposite] = false;
-
-      // push neighbor
+      // Opposite wall on neighbor
+      const opp = (d + 2) % 4;
+      cells[nr][nc].walls[opp] = false;
       stack.push([nr, nc]);
     }
   }
 
-  // Now build ASCII representation
-  // We'll create top line, then for each row, for each cell, we do:
-  //  if walls[0] -> a horizontal or else " "
-  // It's simpler to do a 2-row approach: one for horizontal edges, one for vertical edges.
-  let output = '';
+  return cells;
+}
 
-  // top border
-  output += ' _'.repeat(N) + '\n';
+/**
+ * MazeCanvas is the playable area:
+ * - We display the maze in a <canvas>.
+ * - Player can move with arrow keys or WASD from top-left to bottom-right.
+ */
+function MazeCanvas({ cells }) {
+  const canvasRef = useRef(null);
+  const [playerR, setPlayerR] = useState(0);
+  const [playerC, setPlayerC] = useState(0);
+  const [isComplete, setIsComplete] = useState(false);
 
-  for (let r = 0; r < N; r++) {
-    let rowLine = '';
-    let bottomLine = '';
-    for (let c = 0; c < N; c++) {
-      const cell = cells[r][c];
-      const rightWall = cell.walls[1];
-      const bottomWall = cell.walls[2];
+  const size = cells.length;
+  const cellPx = 40; // each cell is 40x40 in the canvas
+  const canvasSize = cellPx * size;
 
-      // For rowLine: if left wall or c=0, we add '|', else ' '
-      if (c === 0) {
-        rowLine += '|';
+  // We'll handle movement on keydown
+  useEffect(() => {
+    function handleKey(e) {
+      if (isComplete) return;
+      let dir = -1;
+      switch (e.key) {
+        case 'ArrowUp':
+        case 'w':
+        case 'W':
+          dir = 0; break;
+        case 'ArrowRight':
+        case 'd':
+        case 'D':
+          dir = 1; break;
+        case 'ArrowDown':
+        case 's':
+        case 'S':
+          dir = 2; break;
+        case 'ArrowLeft':
+        case 'a':
+        case 'A':
+          dir = 3; break;
+        default:
+          return;
       }
-      rowLine += cell.walls[0] ? '_' : ' ';
-      // If rightWall, put '|', else ' '
-      rowLine += rightWall ? '|' : ' ';
-
-      // For bottomLine, maybe skip for brevity. We'll rely on rowLine's underscores.
-      // But let's do a quick approach: if bottomWall => underscore beneath
-      bottomLine += '  ';
+      // check walls
+      const current = cells[playerR][playerC];
+      if (!current.walls[dir]) {
+        // means no wall in that direction
+        let newR = playerR, newC = playerC;
+        if (dir === 0) newR--;
+        if (dir === 1) newC++;
+        if (dir === 2) newR++;
+        if (dir === 3) newC--;
+        setPlayerR(newR);
+        setPlayerC(newC);
+      }
     }
-    output += rowLine + '\n';
-    // We won't do bottomLine for a minimal approach
-  }
 
-  return output;
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [playerR, playerC, isComplete, cells]);
+
+  // Check for completion whenever player moves
+  useEffect(() => {
+    if (playerR === size - 1 && playerC === size - 1) {
+      setIsComplete(true);
+    }
+  }, [playerR, playerC, size]);
+
+  // Draw the maze on each render or player move
+  useEffect(() => {
+    const ctx = canvasRef.current?.getContext('2d');
+    if (!ctx) return;
+
+    // clear
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, canvasSize, canvasSize);
+
+    // draw each cell's walls
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.lineWidth = 2;
+
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        const cell = cells[r][c];
+        const x = c * cellPx;
+        const y = r * cellPx;
+
+        // walls order: top(0),right(1),bottom(2),left(3)
+        // top
+        if (cell.walls[0]) {
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo(x + cellPx, y);
+          ctx.stroke();
+        }
+        // right
+        if (cell.walls[1]) {
+          ctx.beginPath();
+          ctx.moveTo(x + cellPx, y);
+          ctx.lineTo(x + cellPx, y + cellPx);
+          ctx.stroke();
+        }
+        // bottom
+        if (cell.walls[2]) {
+          ctx.beginPath();
+          ctx.moveTo(x, y + cellPx);
+          ctx.lineTo(x + cellPx, y + cellPx);
+          ctx.stroke();
+        }
+        // left
+        if (cell.walls[3]) {
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo(x, y + cellPx);
+          ctx.stroke();
+        }
+      }
+    }
+
+    // draw the player
+    ctx.fillStyle = '#00FF00';
+    const px = playerC * cellPx + cellPx / 2;
+    const py = playerR * cellPx + cellPx / 2;
+    ctx.beginPath();
+    ctx.arc(px, py, cellPx / 5, 0, 2 * Math.PI);
+    ctx.fill();
+
+    // if done, draw a big "WIN" message
+    if (isComplete) {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+      ctx.fillRect(0, canvasSize / 2 - 30, canvasSize, 60);
+      ctx.fillStyle = '#000';
+      ctx.font = '30px sans-serif';
+      ctx.fillText('You solved it!', 30, canvasSize / 2 + 10);
+    }
+  }, [cells, playerR, playerC, isComplete, cellPx, canvasSize, size]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      width={canvasSize}
+      height={canvasSize}
+      style={{
+        border: '1px solid #fff',
+        display: 'block',
+        marginTop: '1rem'
+      }}
+    />
+  );
 }
 
 
@@ -153,7 +237,7 @@ export default function MazePage() {
   const [inscriptions, setInscriptions] = useState([]);
   const [selectedInscription, setSelectedInscription] = useState('');
   const [inscriptionDetail, setInscriptionDetail] = useState('');
-  const [mazeASCII, setMazeASCII] = useState('');
+  const [mazeCells, setMazeCells] = useState(null);
 
   const [debugMessage, setDebugMessage] = useState('');
 
@@ -169,7 +253,7 @@ export default function MazePage() {
       setInscriptions([]);
       setSelectedInscription('');
       setInscriptionDetail('');
-      setMazeASCII('');
+      setMazeCells(null);
 
       const accountsResult = await Wallet.request('getAccounts', {
         purposes: [AddressPurpose.Payment, AddressPurpose.Ordinals],
@@ -202,10 +286,10 @@ export default function MazePage() {
       return;
     }
     try {
-      setMazeASCII('');
       setInscriptionDetail('');
       setSelectedInscription('');
       setInscriptions([]);
+      setMazeCells(null);
       setOrdinalsResult('Looking up address...');
 
       const res = await fetch(`${baseOrdApiUrl}/address/${selectedAddress}`, {
@@ -239,7 +323,7 @@ export default function MazePage() {
       return;
     }
     try {
-      setMazeASCII('');
+      setMazeCells(null);
       setInscriptionDetail('Fetching inscription details...');
       const res = await fetch(`${baseOrdApiUrl}/inscription/${selectedInscription}`, {
         headers: { Accept: 'application/json' },
@@ -256,14 +340,14 @@ export default function MazePage() {
     }
   }
 
-  // Step 4: Generate Maze from inscription ID
+  // Step 4: Generate playable Maze from inscription
   function handleGenerateMaze() {
     if (!selectedInscription) {
       setDebugMessage('No inscription selected for maze generation.');
       return;
     }
-    const maze = generateMazeASCII(selectedInscription);
-    setMazeASCII(maze);
+    const cells = buildMazeFromInscriptionID(selectedInscription, 10);
+    setMazeCells(cells);
   }
 
   return (
@@ -329,17 +413,18 @@ export default function MazePage() {
         </div>
       )}
 
-      {/* Step 4: Generate Maze from inscription */}
+      {/* Step 4: Generate playable Maze from inscription */}
       {selectedInscription && (
         <div className="section">
-          <h3>4) Generate Maze</h3>
+          <h3>4) Generate Playable Maze</h3>
           <button onClick={handleGenerateMaze}>
             Make Maze from Inscription ID
           </button>
-          {mazeASCII && (
-            <pre className="result" style={{ marginTop: '1rem' }}>
-              {mazeASCII}
-            </pre>
+          <p style={{ marginTop: '0.5rem' }}>
+            Use arrow keys or WASD to move. Start is top-left, goal is bottom-right.
+          </p>
+          {mazeCells && (
+            <MazeCanvas cells={mazeCells} />
           )}
         </div>
       )}
