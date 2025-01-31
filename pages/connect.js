@@ -1,26 +1,20 @@
+// File: pages/connect.js
 import { useState } from 'react';
 import Wallet, { AddressPurpose } from 'sats-connect';
 
-/**
- * This page uses sats-connect to request addresses from the Xverse wallet,
- * then uses the GET /address/<ADDRESS> endpoint from your existing Ordinals API
- * page (https://tx.ordstuff.info) to fetch inscriptions/outputs for a chosen address.
- * The user can then select an inscription to see its details.
- */
 export default function ConnectPage() {
   const [addresses, setAddresses] = useState([]);
   const [selectedAddress, setSelectedAddress] = useState('');
-  const [ordinalsResult, setOrdinalsResult] = useState('');   // text output from /address/<ADDRESS>
+  const [ordinalsResult, setOrdinalsResult] = useState('');
   const [inscriptions, setInscriptions] = useState([]);
   const [selectedInscription, setSelectedInscription] = useState('');
   const [inscriptionDetail, setInscriptionDetail] = useState('');
 
-  // For debugging any error or extra messages
   const [debugMessage, setDebugMessage] = useState('');
 
   const baseOrdApiUrl = 'https://tx.ordstuff.info';
 
-  // Step 1: Connect to wallet -> Request addresses
+  // Step 1: Connect to wallet -> request addresses
   async function handleGetAddresses() {
     try {
       setDebugMessage('Requesting addresses from Xverse...');
@@ -48,14 +42,14 @@ export default function ConnectPage() {
       }
 
       setAddresses(extracted);
-      setSelectedAddress(extracted[0]); // pick the first as default
+      setSelectedAddress(extracted[0]);
       setDebugMessage(`Addresses retrieved:\n${extracted.join('\n')}`);
     } catch (error) {
       setDebugMessage(`Error retrieving addresses: ${error.message}`);
     }
   }
 
-  // Step 2: For the chosen address, call GET /address/<ADDRESS> from the Ordinals API
+  // Step 2: For the chosen address, GET /address/<ADDRESS> from Ordinals API
   async function handleLookupAddress() {
     if (!selectedAddress) {
       setDebugMessage('No address selected.');
@@ -65,10 +59,11 @@ export default function ConnectPage() {
       setInscriptionDetail('');
       setSelectedInscription('');
       setInscriptions([]);
-      setOrdinalsResult('Looking up...');
+      setOrdinalsResult('Looking up address...');
 
-      const url = `${baseOrdApiUrl}/address/${selectedAddress}`;
-      const res = await fetch(url, { headers: { Accept: 'application/json' } });
+      const res = await fetch(`${baseOrdApiUrl}/address/${selectedAddress}`, {
+        headers: { Accept: 'application/json' },
+      });
       if (!res.ok) {
         const errTxt = await res.text();
         throw new Error(`HTTP ${res.status} - ${errTxt}`);
@@ -76,8 +71,7 @@ export default function ConnectPage() {
       const data = await res.json();
       setOrdinalsResult(JSON.stringify(data, null, 2));
 
-      // If 'inscriptions' is present in the response, let's store them
-      if (data.inscriptions && Array.isArray(data.inscriptions)) {
+      if (Array.isArray(data.inscriptions)) {
         setInscriptions(data.inscriptions);
         if (data.inscriptions.length > 0) {
           setSelectedInscription(data.inscriptions[0]);
@@ -87,11 +81,11 @@ export default function ConnectPage() {
       }
     } catch (error) {
       setOrdinalsResult('');
-      setDebugMessage(`Error looking up ordinals: ${error.message}`);
+      setDebugMessage(`Error looking up address ordinals: ${error.message}`);
     }
   }
 
-  // Step 3: For the chosen inscription, call GET /inscription/<INSCRIPTION_ID>
+  // Step 3: For the chosen inscription, GET /inscription/<INSCRIPTION_ID>
   async function handleLookupInscription() {
     if (!selectedInscription) {
       setDebugMessage('No inscription selected.');
@@ -99,8 +93,9 @@ export default function ConnectPage() {
     }
     try {
       setInscriptionDetail('Fetching inscription details...');
-      const url = `${baseOrdApiUrl}/inscription/${selectedInscription}`;
-      const res = await fetch(url, { headers: { Accept: 'application/json' } });
+      const res = await fetch(`${baseOrdApiUrl}/inscription/${selectedInscription}`, {
+        headers: { Accept: 'application/json' },
+      });
       if (!res.ok) {
         const errTxt = await res.text();
         throw new Error(`HTTP ${res.status} - ${errTxt}`);
@@ -114,84 +109,73 @@ export default function ConnectPage() {
   }
 
   return (
-    <div style={{ color: '#fff', padding: '1rem', maxWidth: '600px', margin: '0 auto' }}>
-      <h1>Xverse Connect</h1>
+    <div style={{ padding: '1rem' }}>
+      <h2>Connect to Xverse</h2>
 
-      {/* Step 1: Connect to wallet */}
-      <div style={{ marginBottom: '1rem' }}>
-        <button
-          onClick={handleGetAddresses}
-          style={{ background: '#0070f3', color: '#fff', padding: '0.5rem 1rem', border: 'none', borderRadius: '4px' }}
-        >
-          Connect & Get Addresses
-        </button>
+      {/* Step 1: Connect & Get Addresses */}
+      <div className="section">
+        <h3>1) Get Addresses</h3>
+        <button onClick={handleGetAddresses}>Connect & Get Addresses</button>
         {addresses.length > 0 && (
-          <div style={{ marginTop: '1rem' }}>
-            <label style={{ marginRight: '0.5rem' }}>Select Address:</label>
+          <>
+            <p style={{ marginTop: '1rem' }}>Select an Address:</p>
             <select
               value={selectedAddress}
               onChange={(e) => setSelectedAddress(e.target.value)}
-              style={{ background: '#222', color: '#fff', padding: '0.3rem 1rem', borderRadius: '4px' }}
+              style={{ padding: '0.3rem', background: '#222', color: '#fff' }}
             >
               {addresses.map((addr) => (
                 <option key={addr} value={addr}>{addr}</option>
               ))}
             </select>
-          </div>
+          </>
         )}
       </div>
 
       {/* Step 2: Lookup address ordinals */}
       {addresses.length > 0 && (
-        <div style={{ marginBottom: '1rem' }}>
-          <button
-            onClick={handleLookupAddress}
-            style={{ background: '#0070f3', color: '#fff', padding: '0.5rem 1rem', border: 'none', borderRadius: '4px' }}
-          >
-            Lookup Ordinals for Selected Address
-          </button>
+        <div className="section">
+          <h3>2) Lookup Ordinals for the Selected Address</h3>
+          <button onClick={handleLookupAddress}>Fetch /address/&lt;ADDRESS&gt;</button>
           {ordinalsResult && (
-            <pre style={{ background: '#000', marginTop: '1rem', padding: '1rem', whiteSpace: 'pre-wrap' }}>
+            <pre className="result" style={{ marginTop: '1rem' }}>
               {ordinalsResult}
             </pre>
           )}
         </div>
       )}
 
-      {/* Step 3: Show inscriptions list, let user pick, then GET /inscription/<ID> */}
+      {/* Step 3: Select an inscription to see details */}
       {inscriptions.length > 0 && (
-        <div style={{ marginBottom: '1rem' }}>
-          <label style={{ display: 'block', marginBottom: '0.5rem' }}>Select Inscription:</label>
+        <div className="section">
+          <h3>3) Inspect an Inscription</h3>
+          <p style={{ marginBottom: '0.5rem' }}>Select an inscription ID:</p>
           <select
-            style={{ background: '#222', color: '#fff', padding: '0.3rem 1rem', borderRadius: '4px', marginBottom: '0.5rem' }}
             value={selectedInscription}
             onChange={(e) => setSelectedInscription(e.target.value)}
+            style={{ padding: '0.3rem', background: '#222', color: '#fff' }}
           >
             {inscriptions.map((insc) => (
               <option key={insc} value={insc}>{insc}</option>
             ))}
           </select>
-          <br />
-          <button
-            onClick={handleLookupInscription}
-            style={{ background: '#0070f3', color: '#fff', padding: '0.5rem 1rem', border: 'none', borderRadius: '4px' }}
-          >
-            Lookup This Inscription
+          <button onClick={handleLookupInscription} style={{ marginLeft: '1rem' }}>
+            Lookup /inscription/&lt;ID&gt;
           </button>
 
           {inscriptionDetail && (
-            <pre style={{ background: '#000', marginTop: '1rem', padding: '1rem', whiteSpace: 'pre-wrap' }}>
+            <pre className="result" style={{ marginTop: '1rem' }}>
               {inscriptionDetail}
             </pre>
           )}
         </div>
       )}
 
-      {/* Debug messages */}
+      {/* Debug Messages */}
       {debugMessage && (
-        <div style={{ background: '#222', padding: '1rem', marginTop: '1rem', border: '1px solid #444' }}>
-          <strong>Debug:</strong>
-          <pre style={{ whiteSpace: 'pre-wrap', color: '#0f0' }}>{debugMessage}</pre>
+        <div className="section">
+          <h3>Debug</h3>
+          <pre className="result">{debugMessage}</pre>
         </div>
       )}
     </div>
