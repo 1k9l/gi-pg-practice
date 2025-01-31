@@ -1,7 +1,9 @@
 // File: components/Layout.js
 
 import Link from 'next/link';
-import '../styles/globals.css'; // so the .navbar etc. classes are available
+
+// Notice: we do NOT import '../styles/globals.css' here!
+// Next.js won't allow importing global CSS in components.
 
 export default function Layout({ children }) {
   return (
@@ -15,7 +17,7 @@ export default function Layout({ children }) {
         </div>
       </div>
 
-      {/* The page-specific content */}
+      {/* Page-specific content rendered below */}
       {children}
     </div>
   );
