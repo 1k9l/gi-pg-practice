@@ -1,10 +1,10 @@
+// File: pages/index.js
 import { useState } from 'react';
-import Link from 'next/link';  // <-- import Link here for the navbar
 
 export default function Home() {
   const baseUrl = 'https://tx.ordstuff.info';
 
-  // States for all inputs/results
+  // states for all inputs/results...
   const [addressInput, setAddressInput] = useState('');
   const [addressResult, setAddressResult] = useState('');
 
@@ -83,11 +83,9 @@ export default function Home() {
       }
       const text = await res.text();
       try {
-        // Try parse as JSON
         const data = JSON.parse(text);
         setResult(JSON.stringify(data, null, 2));
       } catch (err) {
-        // If not JSON, show as text
         setResult(text);
       }
     } catch (error) {
@@ -118,411 +116,398 @@ export default function Home() {
   }
 
   return (
-    <div>
-      <div className="navbar">
-        <h1>Ordinal API Tester</h1>
-        <div className="links">
-          {/* Updated to use Link instead of plain text */}
-          <Link href="/">Home</Link>
-          <Link href="/connect" style={{ marginLeft: '1rem' }}>
-            Connect
-          </Link>
-        </div>
+    <div style={{ padding: '1rem' }}>
+      {/* 1) GET /address/<ADDRESS> */}
+      <div className="section">
+        <h2>GET /address/&lt;ADDRESS&gt;</h2>
+        <label>Address:</label>
+        <input
+          type="text"
+          value={addressInput}
+          onChange={(e) => setAddressInput(e.target.value)}
+          placeholder="bc1p..."
+        />
+        <button onClick={() => handleGetRequest(`/address/${addressInput}`, setAddressResult)}>
+          Fetch Address Info
+        </button>
+        {addressResult && <pre className="result">{addressResult}</pre>}
       </div>
 
-      <div style={{ padding: '1rem' }}>
-        {/* 1) GET /address/<ADDRESS> */}
-        <div className="section">
-          <h2>GET /address/&lt;ADDRESS&gt;</h2>
-          <label>Address:</label>
-          <input
-            type="text"
-            value={addressInput}
-            onChange={(e) => setAddressInput(e.target.value)}
-            placeholder="bc1p..."
-          />
-          <button onClick={() => handleGetRequest(`/address/${addressInput}`, setAddressResult)}>
-            Fetch Address Info
-          </button>
-          {addressResult && <pre className="result">{addressResult}</pre>}
-        </div>
+      {/* 2) GET /block/<BLOCKHASH> */}
+      <div className="section">
+        <h2>GET /block/&lt;BLOCKHASH&gt;</h2>
+        <label>Block Hash:</label>
+        <input
+          type="text"
+          value={blockHashInput}
+          onChange={(e) => setBlockHashInput(e.target.value)}
+          placeholder="000000000019d668..."
+        />
+        <button onClick={() => handleGetRequest(`/block/${blockHashInput}`, setBlockHashResult)}>
+          Fetch Block by Hash
+        </button>
+        {blockHashResult && <pre className="result">{blockHashResult}</pre>}
+      </div>
 
-        {/* 2) GET /block/<BLOCKHASH> */}
-        <div className="section">
-          <h2>GET /block/&lt;BLOCKHASH&gt;</h2>
-          <label>Block Hash:</label>
-          <input
-            type="text"
-            value={blockHashInput}
-            onChange={(e) => setBlockHashInput(e.target.value)}
-            placeholder="000000000019d668..."
-          />
-          <button onClick={() => handleGetRequest(`/block/${blockHashInput}`, setBlockHashResult)}>
-            Fetch Block by Hash
-          </button>
-          {blockHashResult && <pre className="result">{blockHashResult}</pre>}
-        </div>
+      {/* 3) GET /block/<BLOCKHEIGHT> */}
+      <div className="section">
+        <h2>GET /block/&lt;BLOCKHEIGHT&gt;</h2>
+        <label>Block Height:</label>
+        <input
+          type="number"
+          value={blockHeightInput}
+          onChange={(e) => setBlockHeightInput(e.target.value)}
+          placeholder="e.g. 0"
+        />
+        <button onClick={() => handleGetRequest(`/block/${blockHeightInput}`, setBlockHeightResult)}>
+          Fetch Block by Height
+        </button>
+        {blockHeightResult && <pre className="result">{blockHeightResult}</pre>}
+      </div>
 
-        {/* 3) GET /block/<BLOCKHEIGHT> */}
-        <div className="section">
-          <h2>GET /block/&lt;BLOCKHEIGHT&gt;</h2>
-          <label>Block Height:</label>
-          <input
-            type="number"
-            value={blockHeightInput}
-            onChange={(e) => setBlockHeightInput(e.target.value)}
-            placeholder="e.g. 0"
-          />
-          <button onClick={() => handleGetRequest(`/block/${blockHeightInput}`, setBlockHeightResult)}>
-            Fetch Block by Height
-          </button>
-          {blockHeightResult && <pre className="result">{blockHeightResult}</pre>}
-        </div>
+      {/* 4) GET /blockcount */}
+      <div className="section">
+        <h2>GET /blockcount</h2>
+        <button onClick={() => handleGetRequest('/blockcount', setBlockCountResult)}>
+          Get Latest Block Height
+        </button>
+        {blockCountResult && <pre className="result">{blockCountResult}</pre>}
+      </div>
 
-        {/* 4) GET /blockcount */}
-        <div className="section">
-          <h2>GET /blockcount</h2>
-          <button onClick={() => handleGetRequest('/blockcount', setBlockCountResult)}>
-            Get Latest Block Height
-          </button>
-          {blockCountResult && <pre className="result">{blockCountResult}</pre>}
-        </div>
+      {/* 5) GET /blockhash */}
+      <div className="section">
+        <h2>GET /blockhash</h2>
+        <button onClick={() => handleGetRequest('/blockhash', setBlockHashTipResult)}>
+          Get Latest Block Hash
+        </button>
+        {blockHashTipResult && <pre className="result">{blockHashTipResult}</pre>}
+      </div>
 
-        {/* 5) GET /blockhash */}
-        <div className="section">
-          <h2>GET /blockhash</h2>
-          <button onClick={() => handleGetRequest('/blockhash', setBlockHashTipResult)}>
-            Get Latest Block Hash
-          </button>
-          {blockHashTipResult && <pre className="result">{blockHashTipResult}</pre>}
-        </div>
+      {/* 6) GET /blockhash/<BLOCKHEIGHT> */}
+      <div className="section">
+        <h2>GET /blockhash/&lt;BLOCKHEIGHT&gt;</h2>
+        <label>Block Height:</label>
+        <input
+          type="number"
+          value={blockHashByHeightInput}
+          onChange={(e) => setBlockHashByHeightInput(e.target.value)}
+        />
+        <button
+          onClick={() =>
+            handleGetRequest(`/blockhash/${blockHashByHeightInput}`, setBlockHashByHeightResult)
+          }
+        >
+          Get Hash By Height
+        </button>
+        {blockHashByHeightResult && <pre className="result">{blockHashByHeightResult}</pre>}
+      </div>
 
-        {/* 6) GET /blockhash/<BLOCKHEIGHT> */}
-        <div className="section">
-          <h2>GET /blockhash/&lt;BLOCKHEIGHT&gt;</h2>
-          <label>Block Height:</label>
-          <input
-            type="number"
-            value={blockHashByHeightInput}
-            onChange={(e) => setBlockHashByHeightInput(e.target.value)}
-          />
-          <button
-            onClick={() =>
-              handleGetRequest(`/blockhash/${blockHashByHeightInput}`, setBlockHashByHeightResult)
-            }
-          >
-            Get Hash By Height
-          </button>
-          {blockHashByHeightResult && <pre className="result">{blockHashByHeightResult}</pre>}
-        </div>
+      {/* 7) GET /blockheight */}
+      <div className="section">
+        <h2>GET /blockheight</h2>
+        <button onClick={() => handleGetRequest('/blockheight', setBlockHeightTipResult)}>
+          Get Latest Block Height
+        </button>
+        {blockHeightTipResult && <pre className="result">{blockHeightTipResult}</pre>}
+      </div>
 
-        {/* 7) GET /blockheight */}
-        <div className="section">
-          <h2>GET /blockheight</h2>
-          <button onClick={() => handleGetRequest('/blockheight', setBlockHeightTipResult)}>
-            Get Latest Block Height
-          </button>
-          {blockHeightTipResult && <pre className="result">{blockHeightTipResult}</pre>}
-        </div>
+      {/* 8) GET /blocks */}
+      <div className="section">
+        <h2>GET /blocks</h2>
+        <button onClick={() => handleGetRequest('/blocks', setBlocksResult)}>
+          Get Latest 100 Blocks
+        </button>
+        {blocksResult && <pre className="result">{blocksResult}</pre>}
+      </div>
 
-        {/* 8) GET /blocks */}
-        <div className="section">
-          <h2>GET /blocks</h2>
-          <button onClick={() => handleGetRequest('/blocks', setBlocksResult)}>
-            Get Latest 100 Blocks
-          </button>
-          {blocksResult && <pre className="result">{blocksResult}</pre>}
-        </div>
+      {/* 9) GET /blocktime */}
+      <div className="section">
+        <h2>GET /blocktime</h2>
+        <button onClick={() => handleGetRequest('/blocktime', setBlockTimeResult)}>
+          Get Time Of Latest Block
+        </button>
+        {blockTimeResult && <pre className="result">{blockTimeResult}</pre>}
+      </div>
 
-        {/* 9) GET /blocktime */}
-        <div className="section">
-          <h2>GET /blocktime</h2>
-          <button onClick={() => handleGetRequest('/blocktime', setBlockTimeResult)}>
-            Get Time Of Latest Block
-          </button>
-          {blockTimeResult && <pre className="result">{blockTimeResult}</pre>}
-        </div>
+      {/* 10) GET /decode/<TXID> */}
+      <div className="section">
+        <h2>GET /decode/&lt;TRANSACTION_ID&gt;</h2>
+        <label>Transaction ID:</label>
+        <input
+          type="text"
+          value={decodeTxInput}
+          onChange={(e) => setDecodeTxInput(e.target.value)}
+          placeholder="Enter TXID"
+        />
+        <button onClick={() => handleGetRequest(`/decode/${decodeTxInput}`, setDecodeTxResult)}>
+          Decode Transaction
+        </button>
+        {decodeTxResult && <pre className="result">{decodeTxResult}</pre>}
+      </div>
 
-        {/* 10) GET /decode/<TXID> */}
-        <div className="section">
-          <h2>GET /decode/&lt;TRANSACTION_ID&gt;</h2>
-          <label>Transaction ID:</label>
-          <input
-            type="text"
-            value={decodeTxInput}
-            onChange={(e) => setDecodeTxInput(e.target.value)}
-            placeholder="Enter TXID"
-          />
-          <button onClick={() => handleGetRequest(`/decode/${decodeTxInput}`, setDecodeTxResult)}>
-            Decode Transaction
-          </button>
-          {decodeTxResult && <pre className="result">{decodeTxResult}</pre>}
-        </div>
+      {/* 11) GET /inscription/<INSCRIPTION_ID> */}
+      <div className="section">
+        <h2>GET /inscription/&lt;INSCRIPTION_ID&gt;</h2>
+        <label>Inscription ID:</label>
+        <input
+          type="text"
+          value={inscriptionIdInput}
+          onChange={(e) => setInscriptionIdInput(e.target.value)}
+          placeholder="abcdef1234...i0"
+        />
+        <button onClick={() => handleGetRequest(`/inscription/${inscriptionIdInput}`, setInscriptionResult)}>
+          Get Inscription Info
+        </button>
+        {inscriptionResult && <pre className="result">{inscriptionResult}</pre>}
+      </div>
 
-        {/* 11) GET /inscription/<INSCRIPTION_ID> */}
-        <div className="section">
-          <h2>GET /inscription/&lt;INSCRIPTION_ID&gt;</h2>
-          <label>Inscription ID:</label>
-          <input
-            type="text"
-            value={inscriptionIdInput}
-            onChange={(e) => setInscriptionIdInput(e.target.value)}
-            placeholder="abcdef1234...i0"
-          />
-          <button onClick={() => handleGetRequest(`/inscription/${inscriptionIdInput}`, setInscriptionResult)}>
-            Get Inscription Info
-          </button>
-          {inscriptionResult && <pre className="result">{inscriptionResult}</pre>}
-        </div>
+      {/* 12) GET /inscription/<INSCRIPTION_ID>/<CHILD> */}
+      <div className="section">
+        <h2>GET /inscription/&lt;INSCRIPTION_ID&gt;/&lt;CHILD&gt;</h2>
+        <label>Inscription ID:</label>
+        <input
+          type="text"
+          value={inscriptionIdInput}
+          onChange={(e) => setInscriptionIdInput(e.target.value)}
+          placeholder="abcdef1234...i0"
+        />
+        <label>Child (number):</label>
+        <input
+          type="number"
+          value={childIndexInput}
+          onChange={(e) => setChildIndexInput(e.target.value)}
+        />
+        <button
+          onClick={() =>
+            handleGetRequest(`/inscription/${inscriptionIdInput}/${childIndexInput}`, setInscriptionChildResult)
+          }
+        >
+          Get Child Info
+        </button>
+        {inscriptionChildResult && <pre className="result">{inscriptionChildResult}</pre>}
+      </div>
 
-        {/* 12) GET /inscription/<INSCRIPTION_ID>/<CHILD> */}
-        <div className="section">
-          <h2>GET /inscription/&lt;INSCRIPTION_ID&gt;/&lt;CHILD&gt;</h2>
-          <label>Inscription ID:</label>
-          <input
-            type="text"
-            value={inscriptionIdInput}
-            onChange={(e) => setInscriptionIdInput(e.target.value)}
-            placeholder="abcdef1234...i0"
-          />
-          <label>Child (number):</label>
-          <input
-            type="number"
-            value={childIndexInput}
-            onChange={(e) => setChildIndexInput(e.target.value)}
-          />
-          <button
-            onClick={() =>
-              handleGetRequest(`/inscription/${inscriptionIdInput}/${childIndexInput}`, setInscriptionChildResult)
-            }
-          >
-            Get Child Info
-          </button>
-          {inscriptionChildResult && <pre className="result">{inscriptionChildResult}</pre>}
-        </div>
+      {/* 13) POST /inscriptions */}
+      <div className="section">
+        <h2>POST /inscriptions</h2>
+        <label>Array of Inscription IDs (JSON):</label>
+        <textarea
+          rows={3}
+          value={postInscriptionsInput}
+          onChange={(e) => setPostInscriptionsInput(e.target.value)}
+        />
+        <button
+          onClick={() =>
+            handlePostRequest('/inscriptions', postInscriptionsInput, setPostInscriptionsResult)
+          }
+        >
+          POST Inscriptions
+        </button>
+        {postInscriptionsResult && <pre className="result">{postInscriptionsResult}</pre>}
+      </div>
 
-        {/* 13) POST /inscriptions */}
-        <div className="section">
-          <h2>POST /inscriptions</h2>
-          <label>Array of Inscription IDs (JSON):</label>
-          <textarea
-            rows={3}
-            value={postInscriptionsInput}
-            onChange={(e) => setPostInscriptionsInput(e.target.value)}
-          />
-          <button
-            onClick={() =>
-              handlePostRequest('/inscriptions', postInscriptionsInput, setPostInscriptionsResult)
-            }
-          >
-            POST Inscriptions
-          </button>
-          {postInscriptionsResult && <pre className="result">{postInscriptionsResult}</pre>}
-        </div>
+      {/* 14) GET /inscriptions */}
+      <div className="section">
+        <h2>GET /inscriptions</h2>
+        <button onClick={() => handleGetRequest('/inscriptions', setGetInscriptionsResult)}>
+          Get Latest 100 Inscriptions
+        </button>
+        {getInscriptionsResult && <pre className="result">{getInscriptionsResult}</pre>}
+      </div>
 
-        {/* 14) GET /inscriptions */}
-        <div className="section">
-          <h2>GET /inscriptions</h2>
-          <button onClick={() => handleGetRequest('/inscriptions', setGetInscriptionsResult)}>
-            Get Latest 100 Inscriptions
-          </button>
-          {getInscriptionsResult && <pre className="result">{getInscriptionsResult}</pre>}
-        </div>
+      {/* 15) GET /inscriptions/<PAGE> */}
+      <div className="section">
+        <h2>GET /inscriptions/&lt;PAGE&gt;</h2>
+        <label>Page #:</label>
+        <input
+          type="number"
+          value={inscriptionsPageInput}
+          onChange={(e) => setInscriptionsPageInput(e.target.value)}
+          placeholder="0,1,2..."
+        />
+        <button
+          onClick={() =>
+            handleGetRequest(`/inscriptions/${inscriptionsPageInput}`, setInscriptionsPageResult)
+          }
+        >
+          Get Inscriptions By Page
+        </button>
+        {inscriptionsPageResult && <pre className="result">{inscriptionsPageResult}</pre>}
+      </div>
 
-        {/* 15) GET /inscriptions/<PAGE> */}
-        <div className="section">
-          <h2>GET /inscriptions/&lt;PAGE&gt;</h2>
-          <label>Page #:</label>
-          <input
-            type="number"
-            value={inscriptionsPageInput}
-            onChange={(e) => setInscriptionsPageInput(e.target.value)}
-            placeholder="0,1,2..."
-          />
-          <button
-            onClick={() =>
-              handleGetRequest(`/inscriptions/${inscriptionsPageInput}`, setInscriptionsPageResult)
-            }
-          >
-            Get Inscriptions By Page
-          </button>
-          {inscriptionsPageResult && <pre className="result">{inscriptionsPageResult}</pre>}
-        </div>
+      {/* 16) GET /inscriptions/block/<BLOCKHEIGHT> */}
+      <div className="section">
+        <h2>GET /inscriptions/block/&lt;BLOCKHEIGHT&gt;</h2>
+        <label>Block Height:</label>
+        <input
+          type="number"
+          value={inscriptionsBlockHeightInput}
+          onChange={(e) => setInscriptionsBlockHeightInput(e.target.value)}
+        />
+        <button
+          onClick={() =>
+            handleGetRequest(`/inscriptions/block/${inscriptionsBlockHeightInput}`, setInscriptionsBlockHeightResult)
+          }
+        >
+          Get Inscriptions For Block
+        </button>
+        {inscriptionsBlockHeightResult && (
+          <pre className="result">{inscriptionsBlockHeightResult}</pre>
+        )}
+      </div>
 
-        {/* 16) GET /inscriptions/block/<BLOCKHEIGHT> */}
-        <div className="section">
-          <h2>GET /inscriptions/block/&lt;BLOCKHEIGHT&gt;</h2>
-          <label>Block Height:</label>
-          <input
-            type="number"
-            value={inscriptionsBlockHeightInput}
-            onChange={(e) => setInscriptionsBlockHeightInput(e.target.value)}
-          />
-          <button
-            onClick={() =>
-              handleGetRequest(`/inscriptions/block/${inscriptionsBlockHeightInput}`, setInscriptionsBlockHeightResult)
-            }
-          >
-            Get Inscriptions For Block
-          </button>
-          {inscriptionsBlockHeightResult && (
-            <pre className="result">{inscriptionsBlockHeightResult}</pre>
-          )}
-        </div>
+      {/* 17) GET /install.sh */}
+      <div className="section">
+        <h2>GET /install.sh</h2>
+        <button onClick={() => handleGetRequest('/install.sh', setInstallShResult)}>
+          Fetch install.sh
+        </button>
+        {installShResult && <pre className="result">{installShResult}</pre>}
+      </div>
 
-        {/* 17) GET /install.sh */}
-        <div className="section">
-          <h2>GET /install.sh</h2>
-          <button onClick={() => handleGetRequest('/install.sh', setInstallShResult)}>
-            Fetch install.sh
-          </button>
-          {installShResult && <pre className="result">{installShResult}</pre>}
-        </div>
+      {/* 18) GET /output/<OUTPOINT> */}
+      <div className="section">
+        <h2>GET /output/&lt;OUTPOINT&gt;</h2>
+        <label>Outpoint (txid:index):</label>
+        <input
+          type="text"
+          value={outputInput}
+          onChange={(e) => setOutputInput(e.target.value)}
+          placeholder="abcdef1234:0"
+        />
+        <button onClick={() => handleGetRequest(`/output/${outputInput}`, setOutputResult)}>
+          Fetch Output
+        </button>
+        {outputResult && <pre className="result">{outputResult}</pre>}
+      </div>
 
-        {/* 18) GET /output/<OUTPOINT> */}
-        <div className="section">
-          <h2>GET /output/&lt;OUTPOINT&gt;</h2>
-          <label>Outpoint (txid:index):</label>
-          <input
-            type="text"
-            value={outputInput}
-            onChange={(e) => setOutputInput(e.target.value)}
-            placeholder="abcdef1234:0"
-          />
-          <button onClick={() => handleGetRequest(`/output/${outputInput}`, setOutputResult)}>
-            Fetch Output
-          </button>
-          {outputResult && <pre className="result">{outputResult}</pre>}
-        </div>
+      {/* 19) POST /outputs */}
+      <div className="section">
+        <h2>POST /outputs</h2>
+        <label>Array of Outpoints (JSON):</label>
+        <textarea
+          rows={3}
+          value={postOutputsInput}
+          onChange={(e) => setPostOutputsInput(e.target.value)}
+        />
+        <button
+          onClick={() => handlePostRequest('/outputs', postOutputsInput, setPostOutputsResult)}
+        >
+          POST Outputs
+        </button>
+        {postOutputsResult && <pre className="result">{postOutputsResult}</pre>}
+      </div>
 
-        {/* 19) POST /outputs */}
-        <div className="section">
-          <h2>POST /outputs</h2>
-          <label>Array of Outpoints (JSON):</label>
-          <textarea
-            rows={3}
-            value={postOutputsInput}
-            onChange={(e) => setPostOutputsInput(e.target.value)}
-          />
-          <button
-            onClick={() => handlePostRequest('/outputs', postOutputsInput, setPostOutputsResult)}
-          >
-            POST Outputs
-          </button>
-          {postOutputsResult && <pre className="result">{postOutputsResult}</pre>}
-        </div>
+      {/* 20) GET /outputs/<ADDRESS>?type=xxx */}
+      <div className="section">
+        <h2>GET /outputs/&lt;ADDRESS&gt; [type=optional]</h2>
+        <label>Address:</label>
+        <input
+          type="text"
+          value={outputsAddressInput}
+          onChange={(e) => setOutputsAddressInput(e.target.value)}
+          placeholder="1abc..."
+        />
+        <label>Type (any|cardinal|inscribed|runic):</label>
+        <input
+          type="text"
+          value={outputsTypeInput}
+          onChange={(e) => setOutputsTypeInput(e.target.value)}
+          placeholder="any"
+        />
+        <button
+          onClick={() =>
+            handleGetRequest(
+              `/outputs/${outputsAddressInput}?type=${outputsTypeInput}`,
+              setOutputsAddressResult
+            )
+          }
+        >
+          Get UTXOs By Address
+        </button>
+        {outputsAddressResult && <pre className="result">{outputsAddressResult}</pre>}
+      </div>
 
-        {/* 20) GET /outputs/<ADDRESS>?type=xxx */}
-        <div className="section">
-          <h2>GET /outputs/&lt;ADDRESS&gt; [type=optional]</h2>
-          <label>Address:</label>
-          <input
-            type="text"
-            value={outputsAddressInput}
-            onChange={(e) => setOutputsAddressInput(e.target.value)}
-            placeholder="1abc..."
-          />
-          <label>Type (any|cardinal|inscribed|runic):</label>
-          <input
-            type="text"
-            value={outputsTypeInput}
-            onChange={(e) => setOutputsTypeInput(e.target.value)}
-            placeholder="any"
-          />
-          <button
-            onClick={() =>
-              handleGetRequest(
-                `/outputs/${outputsAddressInput}?type=${outputsTypeInput}`,
-                setOutputsAddressResult
-              )
-            }
-          >
-            Get UTXOs By Address
-          </button>
-          {outputsAddressResult && <pre className="result">{outputsAddressResult}</pre>}
-        </div>
+      {/* 21) GET /rune/<RUNE> */}
+      <div className="section">
+        <h2>GET /rune/&lt;RUNE&gt;</h2>
+        <label>Rune Ticker or ID:</label>
+        <input
+          type="text"
+          value={runeInput}
+          onChange={(e) => setRuneInput(e.target.value)}
+          placeholder="e.g. UNCOMMONGOODS"
+        />
+        <button onClick={() => handleGetRequest(`/rune/${runeInput}`, setRuneResult)}>
+          Get Rune Info
+        </button>
+        {runeResult && <pre className="result">{runeResult}</pre>}
+      </div>
 
-        {/* 21) GET /rune/<RUNE> */}
-        <div className="section">
-          <h2>GET /rune/&lt;RUNE&gt;</h2>
-          <label>Rune Ticker or ID:</label>
-          <input
-            type="text"
-            value={runeInput}
-            onChange={(e) => setRuneInput(e.target.value)}
-            placeholder="e.g. UNCOMMONGOODS"
-          />
-          <button onClick={() => handleGetRequest(`/rune/${runeInput}`, setRuneResult)}>
-            Get Rune Info
-          </button>
-          {runeResult && <pre className="result">{runeResult}</pre>}
-        </div>
+      {/* 22) GET /runes */}
+      <div className="section">
+        <h2>GET /runes</h2>
+        <button onClick={() => handleGetRequest('/runes', setRunesResult)}>
+          Get Last 100 Runes
+        </button>
+        {runesResult && <pre className="result">{runesResult}</pre>}
+      </div>
 
-        {/* 22) GET /runes */}
-        <div className="section">
-          <h2>GET /runes</h2>
-          <button onClick={() => handleGetRequest('/runes', setRunesResult)}>
-            Get Last 100 Runes
-          </button>
-          {runesResult && <pre className="result">{runesResult}</pre>}
-        </div>
+      {/* 23) GET /runes/<PAGE> */}
+      <div className="section">
+        <h2>GET /runes/&lt;PAGE&gt;</h2>
+        <label>Page #:</label>
+        <input
+          type="number"
+          value={runesPageInput}
+          onChange={(e) => setRunesPageInput(e.target.value)}
+          placeholder="0,1,2..."
+        />
+        <button onClick={() => handleGetRequest(`/runes/${runesPageInput}`, setRunesPageResult)}>
+          Get Runes By Page
+        </button>
+        {runesPageResult && <pre className="result">{runesPageResult}</pre>}
+      </div>
 
-        {/* 23) GET /runes/<PAGE> */}
-        <div className="section">
-          <h2>GET /runes/&lt;PAGE&gt;</h2>
-          <label>Page #:</label>
-          <input
-            type="number"
-            value={runesPageInput}
-            onChange={(e) => setRunesPageInput(e.target.value)}
-            placeholder="0,1,2..."
-          />
-          <button onClick={() => handleGetRequest(`/runes/${runesPageInput}`, setRunesPageResult)}>
-            Get Runes By Page
-          </button>
-          {runesPageResult && <pre className="result">{runesPageResult}</pre>}
-        </div>
+      {/* 24) GET /sat/<SAT> */}
+      <div className="section">
+        <h2>GET /sat/&lt;SAT&gt;</h2>
+        <label>Satoshi number:</label>
+        <input
+          type="text"
+          value={satInput}
+          onChange={(e) => setSatInput(e.target.value)}
+          placeholder="e.g. 2099994106992659"
+        />
+        <button onClick={() => handleGetRequest(`/sat/${satInput}`, setSatResult)}>
+          Get Sat Info
+        </button>
+        {satResult && <pre className="result">{satResult}</pre>}
+      </div>
 
-        {/* 24) GET /sat/<SAT> */}
-        <div className="section">
-          <h2>GET /sat/&lt;SAT&gt;</h2>
-          <label>Satoshi number:</label>
-          <input
-            type="text"
-            value={satInput}
-            onChange={(e) => setSatInput(e.target.value)}
-            placeholder="e.g. 2099994106992659"
-          />
-          <button onClick={() => handleGetRequest(`/sat/${satInput}`, setSatResult)}>
-            Get Sat Info
-          </button>
-          {satResult && <pre className="result">{satResult}</pre>}
-        </div>
+      {/* 25) GET /status */}
+      <div className="section">
+        <h2>GET /status</h2>
+        <button onClick={() => handleGetRequest('/status', setStatusResult)}>
+          Get Server Status
+        </button>
+        {statusResult && <pre className="result">{statusResult}</pre>}
+      </div>
 
-        {/* 25) GET /status */}
-        <div className="section">
-          <h2>GET /status</h2>
-          <button onClick={() => handleGetRequest('/status', setStatusResult)}>
-            Get Server Status
-          </button>
-          {statusResult && <pre className="result">{statusResult}</pre>}
-        </div>
-
-        {/* 26) GET /tx/<TRANSACTION_ID> */}
-        <div className="section">
-          <h2>GET /tx/&lt;TRANSACTION_ID&gt;</h2>
-          <label>TXID:</label>
-          <input
-            type="text"
-            value={txInput}
-            onChange={(e) => setTxInput(e.target.value)}
-            placeholder="abcdef1234..."
-          />
-          <button onClick={() => handleGetRequest(`/tx/${txInput}`, setTxResult)}>
-            Fetch TX
-          </button>
-          {txResult && <pre className="result">{txResult}</pre>}
-        </div>
+      {/* 26) GET /tx/<TRANSACTION_ID> */}
+      <div className="section">
+        <h2>GET /tx/&lt;TRANSACTION_ID&gt;</h2>
+        <label>TXID:</label>
+        <input
+          type="text"
+          value={txInput}
+          onChange={(e) => setTxInput(e.target.value)}
+          placeholder="abcdef1234..."
+        />
+        <button onClick={() => handleGetRequest(`/tx/${txInput}`, setTxResult)}>
+          Fetch TX
+        </button>
+        {txResult && <pre className="result">{txResult}</pre>}
       </div>
     </div>
   );
