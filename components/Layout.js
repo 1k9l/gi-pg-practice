@@ -15,7 +15,7 @@ export default function Layout({ children }) {
         </div>
       </div>
 
-      {/* Page-specific content rendered below */}
+      {/* Page-specific content */}
       {children}
     </div>
   );
