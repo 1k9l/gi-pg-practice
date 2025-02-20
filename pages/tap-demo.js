@@ -154,7 +154,7 @@ function MazeCanvas({ cells, cellSize = 40, exitMarker = false }) {
       }
     }
     if (exitMarker) {
-      // Mark exit by removing a small segment in the bottom wall of bottom-right cell.
+      // Mark exit by removing a small segment in the bottom wall of the bottom-right cell.
       const exitX = (size - 1) * cellSize;
       const exitY = (size - 1) * cellSize;
       ctx.fillStyle = '#000';
@@ -275,7 +275,10 @@ export default function TapDemoMazePage() {
   return (
     <div style={{ padding: '1rem' }}>
       <h2>Tap Wallet Maze Demo</h2>
-      <p>This demo uses the Tap Wallet API to connect, fetch your asset identifiers, and generate deterministic mazes from them.</p>
+      <p>
+        This demo uses the Tap Wallet API to connect, fetch your asset identifiers, and generate
+        deterministic mazes from them.
+      </p>
 
       {/* Step 1: Connect */}
       <div style={{ marginBottom: '1rem' }}>
@@ -292,7 +295,9 @@ export default function TapDemoMazePage() {
               style={{ padding: '0.3rem', background: '#222', color: '#fff' }}
             >
               {addresses.map((addr) => (
-                <option key={addr} value={addr}>{addr}</option>
+                <option key={addr} value={addr}>
+                  {addr}
+                </option>
               ))}
             </select>
           </div>
@@ -317,7 +322,9 @@ export default function TapDemoMazePage() {
                 {inscriptions.map((insc) => {
                   const id = insc.inscriptionId || insc.address;
                   return (
-                    <option key={id} value={id}>{id}</option>
+                    <option key={id} value={id}>
+                      {id}
+                    </option>
                   );
                 })}
               </select>
@@ -341,7 +348,7 @@ export default function TapDemoMazePage() {
         </div>
       )}
 
-      {/* Step 4: 10x10 Maze */}
+      {/* Step 4: 10×10 Maze */}
       {selectedAssetId && (
         <div style={{ marginBottom: '1rem' }}>
           <h3>4) Generate 10×10 Maze</h3>
@@ -355,7 +362,7 @@ export default function TapDemoMazePage() {
         </div>
       )}
 
-      {/* Step 5: 100x100 Maze */}
+      {/* Step 5: 100×100 Maze */}
       {selectedAssetId && (
         <div style={{ marginBottom: '1rem' }}>
           <h3>5) Generate 100×100 Maze with Exit</h3>
