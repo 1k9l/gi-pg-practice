@@ -1,7 +1,7 @@
 // File: pages/tap-demo.js
 import { useState, useEffect, useRef } from 'react';
 
-/* ========= Maze Generation Helpers ========= */
+/* ========= Helper Functions ========= */
 function hashStringToNumbers(str) {
   let h1 = 0x12345678;
   let h2 = 0x87654321;
@@ -28,6 +28,7 @@ function createSeededRandom([seed1, seed2]) {
   };
 }
 
+/* ========= Maze Generation Helpers ========= */
 function buildMazeFromSeed(seed, size = 10) {
   const seeds = hashStringToNumbers(seed);
   const rand = createSeededRandom(seeds);
@@ -71,6 +72,34 @@ function buildMazeFromSeed(seed, size = 10) {
     }
   }
   return cells;
+}
+
+/* ========= Deterministic Pellet Generation for Snake ========= */
+function getDeterministicPellet(assetId, pelletNumber, gridSize) {
+  const seedStr = assetId + ':' + pelletNumber;
+  const [seed1, seed2] = hashStringToNumbers(seedStr);
+  const rand = createSeededRandom([seed1, seed2]);
+  const x = Math.floor(rand() * gridSize);
+  const y = Math.floor(rand() * gridSize);
+  return { x, y };
+}
+
+function getPelletPosition(assetId, pelletNumber, snake, gridSize) {
+  let candidate = getDeterministicPellet(assetId, pelletNumber, gridSize);
+  const collides = snake.some(segment => segment.x === candidate.x && segment.y === candidate.y);
+  if (!collides) return candidate;
+  // Fallback: use additional salt to generate candidate until free cell is found.
+  const seedStr = assetId + ':' + pelletNumber + ':fallback';
+  const [seed1, seed2] = hashStringToNumbers(seedStr);
+  const rand = createSeededRandom([seed1, seed2]);
+  for (let i = 0; i < gridSize * gridSize; i++) {
+    const x = Math.floor(rand() * gridSize);
+    const y = Math.floor(rand() * gridSize);
+    if (!snake.some(segment => segment.x === x && segment.y === y)) {
+      return { x, y };
+    }
+  }
+  return candidate;
 }
 
 /* ========= MazeCanvas Component ========= */
@@ -187,6 +216,124 @@ function MazeCanvas({ cells, cellSize = 40, exitMarker = false }) {
   );
 }
 
+/* ========= SnakeGame Component ========= */
+function SnakeGame({ assetId }) {
+  const canvasRef = useRef(null);
+  // Initialize snake in the middle with length 3.
+  const [snake, setSnake] = useState([{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }]);
+  const [direction, setDirection] = useState('right');
+  const [pelletNumber, setPelletNumber] = useState(1);
+  const [pellet, setPellet] = useState(null);
+  const [gameOver, setGameOver] = useState(false);
+  const gridSize = 20;
+  const cellSize = 20;
+
+  // Whenever assetId or pelletNumber changes, try to set the pellet deterministically.
+  useEffect(() => {
+    if (assetId) {
+      setPellet(getPelletPosition(assetId, pelletNumber, snake, gridSize));
+    }
+  }, [assetId, pelletNumber, snake]);
+
+  // Game loop: move the snake every 150ms.
+  useEffect(() => {
+    if (gameOver) return;
+    const interval = setInterval(() => {
+      setSnake(prev => {
+        const head = prev[0];
+        let newHead = { ...head };
+        if (direction === 'up') newHead.y -= 1;
+        else if (direction === 'down') newHead.y += 1;
+        else if (direction === 'left') newHead.x -= 1;
+        else if (direction === 'right') newHead.x += 1;
+
+        // Check boundaries
+        if (newHead.x < 0 || newHead.x >= gridSize || newHead.y < 0 || newHead.y >= gridSize) {
+          setGameOver(true);
+          return prev;
+        }
+        // Check self collision
+        if (prev.some(segment => segment.x === newHead.x && segment.y === newHead.y)) {
+          setGameOver(true);
+          return prev;
+        }
+
+        let newSnake;
+        // Check if pellet is eaten
+        if (pellet && newHead.x === pellet.x && newHead.y === pellet.y) {
+          // Grow snake: add new head without removing tail.
+          newSnake = [newHead, ...prev];
+          setPelletNumber(prevNum => prevNum + 1);
+        } else {
+          // Normal move: add new head and remove tail.
+          newSnake = [newHead, ...prev.slice(0, -1)];
+        }
+        return newSnake;
+      });
+    }, 150);
+    return () => clearInterval(interval);
+  }, [direction, pellet, gridSize, gameOver]);
+
+  // Key controls for snake (WASD or arrow keys)
+  useEffect(() => {
+    function handleKey(e) {
+      if (gameOver) return;
+      if (['w', 'W', 'ArrowUp'].includes(e.key) && direction !== 'down') setDirection('up');
+      else if (['s', 'S', 'ArrowDown'].includes(e.key) && direction !== 'up') setDirection('down');
+      else if (['a', 'A', 'ArrowLeft'].includes(e.key) && direction !== 'right') setDirection('left');
+      else if (['d', 'D', 'ArrowRight'].includes(e.key) && direction !== 'left') setDirection('right');
+    }
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [direction, gameOver]);
+
+  // Draw snake game on canvas.
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, gridSize * cellSize, gridSize * cellSize);
+
+    // Draw pellet as a red square.
+    if (pellet) {
+      ctx.fillStyle = 'red';
+      ctx.fillRect(pellet.x * cellSize, pellet.y * cellSize, cellSize, cellSize);
+    }
+
+    // Draw snake as green squares.
+    ctx.fillStyle = 'lime';
+    snake.forEach(segment => {
+      ctx.fillRect(segment.x * cellSize, segment.y * cellSize, cellSize, cellSize);
+    });
+
+    // Display Game Over message if needed.
+    if (gameOver) {
+      ctx.fillStyle = 'rgba(255,255,255,0.7)';
+      ctx.fillRect(0, gridSize * cellSize / 2 - 20, gridSize * cellSize, 40);
+      ctx.fillStyle = '#000';
+      ctx.font = '20px sans-serif';
+      ctx.fillText('Game Over', gridSize * cellSize / 2 - 50, gridSize * cellSize / 2 + 7);
+    }
+  }, [snake, pellet, gameOver, gridSize, cellSize]);
+
+  return (
+    <div style={{ marginTop: '2rem' }}>
+      <h3>6) Snake Game</h3>
+      <p>
+        Use WASD or arrow keys to control the snake. Each pellet’s (food) location is
+        deterministically set by your asset’s identifier and pellet round.
+      </p>
+      <canvas
+        ref={canvasRef}
+        width={gridSize * cellSize}
+        height={gridSize * cellSize}
+        style={{ border: '1px solid #fff', marginTop: '1rem' }}
+      />
+    </div>
+  );
+}
+
 /* ========= Main Page Component ========= */
 export default function TapDemoMazePage() {
   const [addresses, setAddresses] = useState([]);
@@ -252,7 +399,7 @@ export default function TapDemoMazePage() {
     setAssetDetail(`Asset identifier: ${selectedAssetId}`);
   }
 
-  // Step 4: Generate 10×10 maze.
+  // Step 4: Generate 10×10 Maze.
   function handleGenerateSmallMaze() {
     if (!selectedAssetId) {
       setDebugMsg('No asset selected for maze generation.');
@@ -262,7 +409,7 @@ export default function TapDemoMazePage() {
     setMazeSmall(cells);
   }
 
-  // Step 5: Generate 100×100 maze with an exit marker.
+  // Step 5: Generate 100×100 Maze with an exit marker.
   function handleGenerateLargeMaze() {
     if (!selectedAssetId) {
       setDebugMsg('No asset selected for maze generation.');
@@ -274,10 +421,10 @@ export default function TapDemoMazePage() {
 
   return (
     <div style={{ padding: '1rem' }}>
-      <h2>Tap Wallet Maze Demo</h2>
+      <h2>Tap Wallet Maze & Snake Demo</h2>
       <p>
         This demo uses the Tap Wallet API to connect, fetch your asset identifiers, and generate
-        deterministic mazes from them.
+        deterministic games from them.
       </p>
 
       {/* Step 1: Connect */}
@@ -370,10 +517,15 @@ export default function TapDemoMazePage() {
             Generate Large Maze
           </button>
           <p style={{ marginTop: '0.5rem' }}>
-            Use arrow keys or WASD to move. Start is top-left; the exit is marked at the bottom-right.
+            Use arrow keys or WASD to move. Start is top-left; exit is marked at bottom-right.
           </p>
           {mazeLarge && <MazeCanvas cells={mazeLarge} cellSize={8} exitMarker={true} />}
         </div>
+      )}
+
+      {/* Step 6: Snake Game */}
+      {selectedAssetId && (
+        <SnakeGame assetId={selectedAssetId} />
       )}
 
       {/* Debug Output */}
