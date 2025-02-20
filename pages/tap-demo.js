@@ -88,7 +88,7 @@ function getPelletPosition(assetId, pelletNumber, snake, gridSize) {
   let candidate = getDeterministicPellet(assetId, pelletNumber, gridSize);
   const collides = snake.some(segment => segment.x === candidate.x && segment.y === candidate.y);
   if (!collides) return candidate;
-  // Fallback: use additional salt to generate candidate until free cell is found.
+  // Fallback: use additional salt to generate candidate until a free cell is found.
   const seedStr = assetId + ':' + pelletNumber + ':fallback';
   const [seed1, seed2] = hashStringToNumbers(seedStr);
   const rand = createSeededRandom([seed1, seed2]);
@@ -113,27 +113,28 @@ function MazeCanvas({ cells, cellSize = 40, exitMarker = false }) {
 
   useEffect(() => {
     function handleKey(e) {
-      // Handle space for starting or restarting.
+      // Space key starts or restarts the game.
       if (e.key === ' ') {
         if (!gameStarted) {
           setGameStarted(true);
           return;
         }
         if (isComplete) {
-          // Restart maze: reset player and game state.
           setPlayerPos({ r: 0, c: 0 });
           setIsComplete(false);
           return;
         }
       }
       if (!gameStarted || isComplete) return;
-
+      
+      // Only WASD controls are used.
       let dir = -1;
-      if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') dir = 0;
-      else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') dir = 1;
-      else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') dir = 2;
-      else if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') dir = 3;
+      if (e.key === 'w' || e.key === 'W') dir = 0;
+      else if (e.key === 'd' || e.key === 'D') dir = 1;
+      else if (e.key === 's' || e.key === 'S') dir = 2;
+      else if (e.key === 'a' || e.key === 'A') dir = 3;
       else return;
+      
       const { r, c } = playerPos;
       const current = cells[r][c];
       if (!current.walls[dir]) {
@@ -158,7 +159,6 @@ function MazeCanvas({ cells, cellSize = 40, exitMarker = false }) {
   useEffect(() => {
     const ctx = canvasRef.current?.getContext('2d');
     if (!ctx) return;
-    // Draw maze background
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, canvasSize, canvasSize);
     ctx.strokeStyle = '#FFF';
@@ -199,13 +199,12 @@ function MazeCanvas({ cells, cellSize = 40, exitMarker = false }) {
       }
     }
     if (exitMarker) {
-      // Mark exit by removing a small segment in the bottom wall of the bottom-right cell.
       const exitX = (size - 1) * cellSize;
       const exitY = (size - 1) * cellSize;
       ctx.fillStyle = '#000';
       ctx.fillRect(exitX + cellSize / 2 - 5, exitY + cellSize - 2, 10, 4);
     }
-    // If game hasn't started, display instructions.
+    // If game hasn't started, display start instructions.
     if (!gameStarted) {
       ctx.fillStyle = 'rgba(0,0,0,0.7)';
       ctx.fillRect(0, 0, canvasSize, canvasSize);
@@ -214,14 +213,14 @@ function MazeCanvas({ cells, cellSize = 40, exitMarker = false }) {
       ctx.fillText('Press Space to Start', 20, canvasSize / 2);
       return;
     }
-    // Draw player as a green circle.
+    // Draw player.
     ctx.fillStyle = '#0F0';
     const px = playerPos.c * cellSize + cellSize / 2;
     const py = playerPos.r * cellSize + cellSize / 2;
     ctx.beginPath();
     ctx.arc(px, py, cellSize / 5, 0, 2 * Math.PI);
     ctx.fill();
-    // If solved, display victory message and restart instructions.
+    // If solved, show victory and restart instructions.
     if (isComplete) {
       ctx.fillStyle = 'rgba(255,255,255,0.7)';
       ctx.fillRect(0, canvasSize / 2 - 30, canvasSize, 60);
@@ -247,7 +246,6 @@ function SnakeGame({ assetId }) {
   const gridSize = 20;
   const cellSize = 20;
   
-  // Initial snake state.
   const initialSnake = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
   
   const [snake, setSnake] = useState(initialSnake);
@@ -258,22 +256,20 @@ function SnakeGame({ assetId }) {
   const [gameOver, setGameOver] = useState(false);
   const [gameStarted, setGameStarted] = useState(false);
 
-  // Set pellet position deterministically whenever pelletNumber or snake changes.
+  // Reset pellet order when pelletNumber or snake changes.
   useEffect(() => {
     if (assetId) {
       setPellet(getPelletPosition(assetId, pelletNumber, snake, gridSize));
     }
   }, [assetId, pelletNumber, snake]);
 
-  // Game loop: move the snake every 150ms.
+  // Game loop.
   useEffect(() => {
     if (!gameStarted || gameOver) return;
     const interval = setInterval(() => {
       setSnake(prev => {
-        // Process queued direction change (only one per tick).
         let currentDir = direction;
         if (nextDirection) {
-          // Ensure not reversing.
           if (
             (direction === 'up' && nextDirection !== 'down') ||
             (direction === 'down' && nextDirection !== 'up') ||
@@ -292,19 +288,16 @@ function SnakeGame({ assetId }) {
         else if (currentDir === 'left') newHead.x -= 1;
         else if (currentDir === 'right') newHead.x += 1;
 
-        // Check boundaries.
         if (newHead.x < 0 || newHead.x >= gridSize || newHead.y < 0 || newHead.y >= gridSize) {
           setGameOver(true);
           return prev;
         }
-        // Check self collision.
         if (prev.some(segment => segment.x === newHead.x && segment.y === newHead.y)) {
           setGameOver(true);
           return prev;
         }
 
         let newSnake;
-        // Check if pellet is eaten.
         if (pellet && newHead.x === pellet.x && newHead.y === pellet.y) {
           newSnake = [newHead, ...prev];
           setPelletNumber(prevNum => prevNum + 1);
@@ -317,7 +310,7 @@ function SnakeGame({ assetId }) {
     return () => clearInterval(interval);
   }, [direction, nextDirection, pellet, gridSize, gameOver, gameStarted]);
 
-  // Key controls with queued direction and start/restart.
+  // Key controls (WASD only) with start/restart.
   useEffect(() => {
     function handleKey(e) {
       if (e.key === ' ') {
@@ -326,7 +319,6 @@ function SnakeGame({ assetId }) {
           return;
         }
         if (gameOver) {
-          // Restart snake game.
           setSnake(initialSnake);
           setDirection('right');
           setNextDirection(null);
@@ -338,10 +330,10 @@ function SnakeGame({ assetId }) {
       }
       if (!gameStarted || gameOver) return;
       let newDir = null;
-      if (['w', 'W', 'ArrowUp'].includes(e.key) && direction !== 'down') newDir = 'up';
-      else if (['s', 'S', 'ArrowDown'].includes(e.key) && direction !== 'up') newDir = 'down';
-      else if (['a', 'A', 'ArrowLeft'].includes(e.key) && direction !== 'right') newDir = 'left';
-      else if (['d', 'D', 'ArrowRight'].includes(e.key) && direction !== 'left') newDir = 'right';
+      if ((e.key === 'w' || e.key === 'W') && direction !== 'down') newDir = 'up';
+      else if ((e.key === 's' || e.key === 'S') && direction !== 'up') newDir = 'down';
+      else if ((e.key === 'a' || e.key === 'A') && direction !== 'right') newDir = 'left';
+      else if ((e.key === 'd' || e.key === 'D') && direction !== 'left') newDir = 'right';
       if (newDir && !nextDirection) {
         setNextDirection(newDir);
       }
@@ -350,7 +342,7 @@ function SnakeGame({ assetId }) {
     return () => window.removeEventListener('keydown', handleKey);
   }, [direction, nextDirection, gameStarted, gameOver]);
 
-  // Draw snake game on canvas.
+  // Draw snake game.
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -358,7 +350,6 @@ function SnakeGame({ assetId }) {
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, gridSize * cellSize, gridSize * cellSize);
 
-    // If game hasn't started, show instructions.
     if (!gameStarted) {
       ctx.fillStyle = 'rgba(0,0,0,0.7)';
       ctx.fillRect(0, 0, gridSize * cellSize, gridSize * cellSize);
@@ -368,17 +359,14 @@ function SnakeGame({ assetId }) {
       return;
     }
 
-    // Draw pellet.
     if (pellet) {
       ctx.fillStyle = 'red';
       ctx.fillRect(pellet.x * cellSize, pellet.y * cellSize, cellSize, cellSize);
     }
-    // Draw snake.
     ctx.fillStyle = 'lime';
     snake.forEach(segment => {
       ctx.fillRect(segment.x * cellSize, segment.y * cellSize, cellSize, cellSize);
     });
-    // If game over, overlay message.
     if (gameOver) {
       ctx.fillStyle = 'rgba(255,255,255,0.7)';
       ctx.fillRect(0, gridSize * cellSize / 2 - 20, gridSize * cellSize, 40);
@@ -392,8 +380,9 @@ function SnakeGame({ assetId }) {
     <div style={{ marginTop: '2rem' }}>
       <h3>6) Snake Game</h3>
       <p>
-        Use WASD or arrow keys to control the snake. Each pellet’s (food) location is
-        deterministically set by your asset’s identifier and pellet round. (Press Space to start/restart.)
+        Use WASD to control the snake. Each pellet’s (food) location is deterministically set by your asset’s identifier and pellet round.
+        If the target pellet location is occupied, a random free cell is used instead.
+        (Press Space to start/restart.)
       </p>
       <canvas
         ref={canvasRef}
@@ -416,12 +405,11 @@ export default function TapDemoMazePage() {
   const [mazeLarge, setMazeLarge] = useState(null);
   const [debugMsg, setDebugMsg] = useState('');
 
-  // Top instructions for the demo page.
+  // Updated instructions (WASD only).
   const instructions = `INSTRUCTIONS:
 1) Press Space to start each game.
-2) Use Arrow Keys or WASD to navigate.
-3) In Snake, only one direction change per tick is accepted.
-4) When a game is over, press Space to restart.`;
+2) Use WASD to navigate. (Arrow keys may scroll the page)
+3) When a game is over, press Space to restart.`;
 
   // Step 1: Connect using Tap Wallet API.
   async function handleConnectTapWallet() {
@@ -584,7 +572,7 @@ export default function TapDemoMazePage() {
             Generate Small Maze
           </button>
           <p style={{ marginTop: '0.5rem' }}>
-            Use arrow keys or WASD to move. Start is top-left; goal is bottom-right. (Press Space to start/restart.)
+            Use WASD to move. Start is top-left; goal is bottom-right. (Press Space to start/restart.)
           </p>
           {mazeSmall && <MazeCanvas cells={mazeSmall} cellSize={40} exitMarker={false} />}
         </div>
@@ -598,7 +586,7 @@ export default function TapDemoMazePage() {
             Generate Large Maze
           </button>
           <p style={{ marginTop: '0.5rem' }}>
-            Use arrow keys or WASD to move. Start is top-left; exit is marked at bottom-right. (Press Space to start/restart.)
+            Use WASD to move. Start is top-left; exit is marked at bottom-right. (Press Space to start/restart.)
           </p>
           {mazeLarge && <MazeCanvas cells={mazeLarge} cellSize={8} exitMarker={true} />}
         </div>
